@@ -19,7 +19,17 @@ class ImageProcessingTool:
         self.initial = True
         # Set up GUI Elements
         self.setup_gui()
-
+        
+        self.method = 'linear'
+        self.contrast = 1.0
+        self.brightness = 0.0
+        self.zoom_factor = 1.0
+        self.rotate_angle = 0.0
+        self.lower = 0
+        self.upper = 255
+        self.bit = 'Original'
+        self.adjusted = False
+        
     def setup_gui(self):
 
         button_frame = tk.Frame(self.root)
@@ -77,23 +87,26 @@ class ImageProcessingTool:
         undo_all_button.grid(row=3, column=8, columnspan=4, padx=12, pady=4, sticky="ew")
 
         # Canvas to display the image
-        self.canvas = tk.Canvas(self.root, width=800, height=800)
+        self.canvas = tk.Canvas(self.root, width=1000, height=400)
         self.canvas.pack(side=tk.BOTTOM, pady=12)
 
-    def clean_widget(self):
+    def clean_widget(self):   
         try:
-            self.widge_frame.destroy()
+            self.widget_frame.destroy()
+            self.adjusted_image = self.image.copy()
+            self.adjusted = True
         except:
             pass
-        self.widge_frame = tk.Frame(self.root)
-        self.widge_frame.pack(side=tk.TOP, fill=tk.X, padx=12, pady=5)
+        self.widget_frame = tk.Frame(self.root)
+        self.widget_frame.pack(side=tk.TOP, fill=tk.X, padx=12, pady=5)
         for i in range(12):  # Adjust this number based on the number of columns you have
-            self.widge_frame.columnconfigure(i, weight=1)
+            self.widget_frame.columnconfigure(i, weight=1)
     
     def open_image(self):
         print("Opening image...")
         # Load image using file dialog
-        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.tif")])
+        file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.tif")],
+                                               initialdir='./')
         if file_path:
             print(f"Image loaded from: {file_path}")
             self.original_image = Image.open(file_path).convert("L") # Convert image to grayscale
@@ -111,7 +124,9 @@ class ImageProcessingTool:
             messagebox.showerror("Error", "No image to save.")
             print("Error: No image to save.")
             return
-        file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("TIFF files", "*.tif")])
+        file_path = filedialog.asksaveasfilename(defaultextension=".png",
+                                                 filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("TIFF files", "*.tif")],
+                                                 initialdir='./')
         if file_path:
             self.image.save(file_path)
             print(f"Image saved to: {file_path}")
@@ -150,6 +165,14 @@ class ImageProcessingTool:
             self.history = []  # Clear the history stack
             self.redo_stack = []  # Clear the redo stack
             self.update_display()
+            self.method = 'linear'
+            self.contrast = 1.0
+            self.brightness = 0.0
+            self.zoom_factor = 1
+            self.rotate_angle = 0
+            self.lower = 0
+            self.upper = 255
+            self.bit = 'Original'
             print("All actions undone.")
         else:
             print("No actions to undo.")
@@ -169,7 +192,7 @@ class ImageProcessingTool:
         y = (canvas_height - image_height) // 2
         self.canvas.create_image(x, y, anchor=tk.NW, image=self.display_image)
         print("Display updated.")
-        
+ 
 # adjust contrast/brightness
     def adjust_contrast_brightness(self):
         if not self.image:
@@ -178,14 +201,14 @@ class ImageProcessingTool:
             
         self.clean_widget()
         # Row 1: Radio buttons to select method
-        method_label = tk.Label(self.widge_frame, text="Select Adjustment Method:")
+        method_label = tk.Label(self.widget_frame, text="Select Adjustment Method:")
         method_label.grid(row=0, column=0, columnspan=6, padx=12, pady=5, sticky="w")
 
         # Radio buttons for selecting method (linear, exponential, logarithmic)
-        self.method_var = tk.StringVar(value="linear")
+        self.method_var = tk.StringVar(value=self.method)
         methods = [("Linear (Y = aX+b)", "linear"), ("Exponential (Y = exp(aX+b))", "exp"), ("Logarithmic (Y = ln(aX+b), b > 1)", "log")]
         for idx, (text, method) in enumerate(methods):
-            method_button = ttk.Radiobutton(self.widge_frame, text=text, variable=self.method_var, value=method)
+            method_button = ttk.Radiobutton(self.widget_frame, text=text, variable=self.method_var, value=method)
             if idx == 0:
                 method_button.grid(row=0, column=2 * (idx + 3), columnspan=2, padx=12, pady=5, sticky='w')
             elif idx == 1:
@@ -194,21 +217,21 @@ class ImageProcessingTool:
                 method_button.grid(row=0, column=2 * (idx + 3), columnspan=2, padx=12, pady=5, sticky='e')
 
         # Row 2: Slider for contrast 'a'
-        contrast_label = tk.Label(self.widge_frame, text="Adjust Contrast (a):")
+        contrast_label = tk.Label(self.widget_frame, text="Adjust Contrast (a):")
         contrast_label.grid(row=1, column=0, columnspan=3, padx=12, pady=5, sticky="w")
-        self.contrast_value_label = tk.Label(self.widge_frame, text="1.0")  # Initialize with the default value
+        self.contrast_value_label = tk.Label(self.widget_frame, text="1.0")  # Initialize with the default value
         self.contrast_value_label.grid(row=1, column=3, padx=12, pady=3, sticky="w")
-        self.contrast_slider = ttk.Scale(self.widge_frame, from_=0.1, to_=3.0, orient=tk.HORIZONTAL, length=700, command=self.update_contrast)
-        self.contrast_slider.set(1.0)  # Default contrast
+        self.contrast_slider = ttk.Scale(self.widget_frame, from_=0.1, to_=3.0, orient=tk.HORIZONTAL, length=700, command=self.update_contrast)
+        self.contrast_slider.set(self.contrast)  # Default contrast
         self.contrast_slider.grid(row=1, column=6, columnspan=6, padx=12, pady=5, sticky='we')
         
         # Row 3: Slider for brightness 'b'
-        brightness_label = tk.Label(self.widge_frame, text="Adjust Brightness (b):")
+        brightness_label = tk.Label(self.widget_frame, text="Adjust Brightness (b):")
         brightness_label.grid(row=2, column=0, columnspan=3, padx=12, pady=5, sticky="w")
-        self.brightness_value_label = tk.Label(self.widge_frame, text="1.0")  # Initialize with the default value
+        self.brightness_value_label = tk.Label(self.widget_frame, text="1.0")  # Initialize with the default value
         self.brightness_value_label.grid(row=2, column=3, padx=12, pady=3, sticky="w")
-        self.brightness_slider = ttk.Scale(self.widge_frame, from_=-100, to_=100, orient=tk.HORIZONTAL, length=700, command=self.update_brightness)
-        self.brightness_slider.set(0)  # Default brightness
+        self.brightness_slider = ttk.Scale(self.widget_frame, from_=-100, to_=100, orient=tk.HORIZONTAL, length=700, command=self.update_brightness)
+        self.brightness_slider.set(self.brightness)  # Default brightness
         self.brightness_slider.grid(row=2, column=6, columnspan=6, padx=12, pady=5, sticky='we')
        
     def update_contrast(self, value):
@@ -220,11 +243,24 @@ class ImageProcessingTool:
         self.apply_adjustments()
         
     def apply_adjustments(self):
+        img_array = np.array(self.adjusted_image.copy())
+        
+        if self.adjusted is True:
+            method = self.method
+            a = self.contrast
+            b = self.brightness
+            if method == "linear":
+                img_array = (img_array - b) / a
+            elif method == "exp":
+                img_array = np.log(img_array)
+                img_array = np.exp(a * img_array + b)
+            elif method == "log":
+                img_array = np.log(a * img_array + b)
+                
         method = self.method_var.get()
         a = self.contrast_slider.get()
         b = self.brightness_slider.get()
-        
-        img_array = np.array(self.original_image.copy())
+        img_array = np.array(self.adjusted_image.copy())
 
         if method == "linear":
             img_array = a * img_array + b
@@ -235,9 +271,13 @@ class ImageProcessingTool:
 
         # Clip the values to be within valid grayscale range
         img_array = np.clip(img_array, 0, 255)
+        
         self.save_state()  # Save the current state before making changes
-        self.adjusted_image = Image.fromarray(img_array.astype(np.uint8))
-        self.image = self.adjusted_image.copy()
+        self.image = Image.fromarray(img_array.astype(np.uint8))
+        self.copied_image = self.image.copy()
+        self.contrast = a
+        self.brightness = b
+        self.method = method
         self.update_display()
 
 # zoom   
@@ -247,27 +287,27 @@ class ImageProcessingTool:
             self.open_image()
         self.clean_widget()
         # Row 1: Label to indicate zooming factor adjustment
-        zoom_label = tk.Label(self.widge_frame, text="Adjust Zooming Factor:")
+        zoom_label = tk.Label(self.widget_frame, text="Adjust Zooming Factor:")
         zoom_label.grid(row=0, column=0, columnspan=3, padx=12, pady=3, sticky="w")
 
         # Label to display the zoom factor dynamically
-        self.zoom_value_label = tk.Label(self.widge_frame, text="1.0")  # Initialize with the default value
+        self.zoom_value_label = tk.Label(self.widget_frame, text="1.0")  # Initialize with the default value
         self.zoom_value_label.grid(row=0, column=9, padx=12, pady=3, sticky="e")
         
         # Row 1: Slider for zooming factor
-        self.zoom_slider = ttk.Scale(self.widge_frame, from_=0.1, to_=10.0, orient=tk.HORIZONTAL, length=600, command=self.apply_zoom)
-        self.zoom_slider.set(1.0)  # Default zooming factor
+        self.zoom_slider = ttk.Scale(self.widget_frame, from_=0.1, to_=10.0, orient=tk.HORIZONTAL, length=600, command=self.apply_zoom)
+        self.zoom_slider.set(self.zoom_factor)  # Default zooming factor
         self.zoom_slider.grid(row=0, column=3, columnspan=6, padx=12, pady=3, sticky="we")
 
     def apply_zoom(self, value):
         # Update the label next to the slider with the current zoom factor
         self.zoom_value_label.config(text=f"{float(value):.2f}")
-        factor = self.zoom_slider.get()
+        self.zoom_factor = self.zoom_slider.get()
         # Zoom in or out of the image
-        new_size = (int(self.original_image.width * factor), int(self.original_image.height * factor))
+        new_size = (int(self.original_image.width * self.zoom_factor), int(self.original_image.height * self.zoom_factor))
+        
         self.save_state()  # Save the current state before making changes
-        self.zoomed_image = self.image.copy().resize(new_size, Image.BILINEAR)
-        self.image = self.zoomed_image.copy()
+        self.image = self.adjusted_image.copy().resize(new_size, Image.BILINEAR)
         self.update_display()
 
 
@@ -279,26 +319,27 @@ class ImageProcessingTool:
         self.clean_widget()
         
         # Row 1: Label to indicate rotating angle adjustment
-        rotate_label = tk.Label(self.widge_frame, text="Adjust Rotating Angle (degree):")
+        rotate_label = tk.Label(self.widget_frame, text="Adjust Rotating Angle (degree):")
         rotate_label.grid(row=0, column=0, columnspan=3, padx=12, pady=3, sticky="w")
 
         # Label to display the rotating angle dynamically
-        self.rotate_value_label = tk.Label(self.widge_frame, text="0.0")  # Initialize with the default value
+        self.rotate_value_label = tk.Label(self.widget_frame, text="0.0")  # Initialize with the default value
         self.rotate_value_label.grid(row=0, column=9, padx=12, pady=3, sticky="e")
         
         # Row 1: Slider for rotating angle
-        self.rotate_slider = ttk.Scale(self.widge_frame, from_=-180, to_=180, orient=tk.HORIZONTAL, length=600, command=self.apply_rotate)
-        self.rotate_slider.set(0.0)  # Default rotating angle
+        self.rotate_slider = ttk.Scale(self.widget_frame, from_=-180, to_=180, orient=tk.HORIZONTAL, length=600, command=self.apply_rotate)
+        self.rotate_slider.set(self.rotate_angle)  # Default rotating angle
         self.rotate_slider.grid(row=0, column=3, columnspan=6, padx=12, pady=3, sticky="we")
 
     def apply_rotate(self, value):
         # Update the label next to the slider with the current zoom factor
         self.rotate_value_label.config(text=f"{float(value):.2f}")
         angle = self.rotate_slider.get()
+        self.rotate_angle = angle
+        
         self.save_state()  # Save the current state before making changes
-        self.rotated_image = self.original_image.copy().rotate(angle, expand=True)  # Expand to fit the entire rotated image
-        # self.image = self.rotated_image.resize((self.original_image.width, self.original_image.height))
-        self.image = self.rotated_image.copy()
+        self.image = self.adjusted_image.copy().rotate(angle, expand=True)  # Expand to fit the entire rotated image
+
         self.update_display()
 
 # gray level slicing    
@@ -311,34 +352,34 @@ class ImageProcessingTool:
         
         self.clean_widget()
         # Row 1: Radio buttons to select method
-        preserve_label = tk.Label(self.widge_frame, text="Preserve unselected areas:")
+        preserve_label = tk.Label(self.widget_frame, text="Preserve unselected areas:")
         preserve_label.grid(row=0, column=0, columnspan=6, padx=12, pady=5, sticky="w")
 
         # Radio buttons for checking if preserved
         self.preserve_var = tk.StringVar(value="no")
         preserve = [("Preserve", "yes"), ("Don't Preserve", "no")]
         for idx, (text, method) in enumerate(preserve):
-            preserve_button = ttk.Radiobutton(self.widge_frame, text=text, variable=self.preserve_var, value=method, command=self.apply_grey_level)
+            preserve_button = ttk.Radiobutton(self.widget_frame, text=text, variable=self.preserve_var, value=method, command=self.apply_grey_level)
             if idx == 0:
                 preserve_button.grid(row=0, column=6, columnspan=3, padx=12, pady=5, sticky='we')
             else:
                 preserve_button.grid(row=0, column=9, columnspan=3, padx=12, pady=5, sticky='e')
         # Row 2: Slider for Lower level
-        lower_label = tk.Label(self.widge_frame, text="Lower level:")
+        lower_label = tk.Label(self.widget_frame, text="Lower level:")
         lower_label.grid(row=1, column=0, columnspan=3, padx=12, pady=5, sticky="w")
-        self.lower_value_label = tk.Label(self.widge_frame, text="0")  # Initialize with the default value
+        self.lower_value_label = tk.Label(self.widget_frame, text="0")  # Initialize with the default value
         self.lower_value_label.grid(row=1, column=3, padx=12, pady=3, sticky="w")
-        self.lower_slider = ttk.Scale(self.widge_frame, from_=0, to_=255, orient=tk.HORIZONTAL, length=700, command=self.update_lower)
-        self.lower_slider.set(1.0)  # Default contrast
+        self.lower_slider = ttk.Scale(self.widget_frame, from_=0, to_=255, orient=tk.HORIZONTAL, length=700, command=self.update_lower)
+        self.lower_slider.set(self.lower)  # Default contrast
         self.lower_slider.grid(row=1, column=6, columnspan=6, padx=12, pady=5, sticky='we')
         
         # Row 3: Slider for Upper level
-        upper_label = tk.Label(self.widge_frame, text="Upper level:")
+        upper_label = tk.Label(self.widget_frame, text="Upper level:")
         upper_label.grid(row=2, column=0, columnspan=3, padx=12, pady=5, sticky="w")
-        self.upper_value_label = tk.Label(self.widge_frame, text="255")  # Initialize with the default value
+        self.upper_value_label = tk.Label(self.widget_frame, text="255")  # Initialize with the default value
         self.upper_value_label.grid(row=2, column=3, padx=12, pady=3, sticky="w")
-        self.upper_slider = ttk.Scale(self.widge_frame, from_=0, to_=255, orient=tk.HORIZONTAL, length=700, command=self.update_upper)
-        self.upper_slider.set(255)  # Default brightness
+        self.upper_slider = ttk.Scale(self.widget_frame, from_=0, to_=255, orient=tk.HORIZONTAL, length=700, command=self.update_upper)
+        self.upper_slider.set(self.upper)  # Default brightness
         self.upper_slider.grid(row=2, column=6, columnspan=6, padx=12, pady=5, sticky='we')
     
     def update_lower(self, value):
@@ -352,16 +393,13 @@ class ImageProcessingTool:
     def apply_grey_level(self):
         
         preserve = self.preserve_var.get()
-        try:
-            lower = int(self.lower_slider.get())
-        except:
-            lower = int(0)
-        try:
-            upper = int(self.upper_slider.get())
-        except:
-            upper = int(255)
+        lower = int(self.lower_slider.get())
+        upper = int(self.upper_slider.get())
+        self.lower = lower
+        self.upper = upper
 
-        img_array = np.array(self.original_image)
+        img_array = np.array(self.adjusted_image.copy())
+
         # Create a mask to select specific gray levels
         mask = (img_array >= lower) & (img_array <= upper)
         if preserve == 'yes':
@@ -370,13 +408,12 @@ class ImageProcessingTool:
             img_array[~mask] = 0  # Set unselected areas to black
 
         self.save_state()  # Save the current state before making changes
-        self.sliced_image = Image.fromarray(img_array)
-        self.image = self.sliced_image.copy()
+        self.image = Image.fromarray(img_array)
+
         self.update_display()
         
 # display histogram
     def display_histogram(self):
-
         # Display the histogram of the current image
         if not self.image:
             messagebox.showerror("Error", "No image loaded.")
@@ -397,25 +434,27 @@ class ImageProcessingTool:
         
         self.clean_widget()
         # Row 1: Radio buttons to select bit-plane
-        level_label = tk.Label(self.widge_frame, text="Bit-plane Level:")
+        level_label = tk.Label(self.widget_frame, text="Bit-plane Level:")
         level_label.grid(row=0, column=0, columnspan=3, padx=12, pady=5, sticky="w")
 
-        self.level_var = tk.StringVar(value="Original")
+        self.level_var = tk.StringVar(value=self.bit)
         level = list(range(8)) + ['Original']
         for idx, l in enumerate(level):
-            level_button = ttk.Radiobutton(self.widge_frame, text=str(l), variable=self.level_var, value=str(l), command=self.apply_bit_plane)
+            level_button = ttk.Radiobutton(self.widget_frame, text=str(l), variable=self.level_var, value=str(l), command=self.apply_bit_plane)
             level_button.grid(row=0, column=3 + idx, padx=12, pady=5, sticky='we')
    
     def apply_bit_plane(self):
         bit = self.level_var.get()
+        self.bit = bit
         if bit != 'Original':
-            img_array = np.array(self.original_image).astype(np.uint8)
+            img_array = np.array(self.adjusted_image.copy()).astype(np.uint8)
             # Extract the selected bit-plane
             bit_plane_img = (img_array >> int(float(bit))) & 1
             bit_plane_img *= 255  # Scale values to 0 or 255 for visualization
             self.save_state()  # Save the current state before making changes
             self.bit_plane_image = Image.fromarray(bit_plane_img.astype(np.uint8))
             self.image = self.bit_plane_image.copy()
+
         else:
             self.image = self.original_image.copy()
         self.update_display()
