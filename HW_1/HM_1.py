@@ -173,6 +173,7 @@ class ImageProcessingTool:
             self.lower = 0
             self.upper = 255
             self.bit = 'Original'
+            self.adjusted = False
             print("All actions undone.")
         else:
             print("No actions to undo.")
@@ -208,7 +209,7 @@ class ImageProcessingTool:
         self.method_var = tk.StringVar(value=self.method)
         methods = [("Linear (Y = aX+b)", "linear"), ("Exponential (Y = exp(aX+b))", "exp"), ("Logarithmic (Y = ln(aX+b), b > 1)", "log")]
         for idx, (text, method) in enumerate(methods):
-            method_button = ttk.Radiobutton(self.widget_frame, text=text, variable=self.method_var, value=method)
+            method_button = ttk.Radiobutton(self.widget_frame, text=text, variable=self.method_var, value=method, command=self.apply_adjustments)
             if idx == 0:
                 method_button.grid(row=0, column=2 * (idx + 3), columnspan=2, padx=12, pady=5, sticky='w')
             elif idx == 1:
@@ -243,24 +244,30 @@ class ImageProcessingTool:
         self.apply_adjustments()
         
     def apply_adjustments(self):
-        img_array = np.array(self.adjusted_image.copy())
         
         if self.adjusted is True:
             method = self.method
             a = self.contrast
             b = self.brightness
+            img_array = np.array(self.adjusted_image.copy())
             if method == "linear":
                 img_array = (img_array - b) / a
             elif method == "exp":
-                img_array = np.log(img_array)
-                img_array = np.exp(a * img_array + b)
+                img_array = (np.log(img_array) - b) / a
             elif method == "log":
-                img_array = np.log(a * img_array + b)
-                
+                img_array = (np.exp(img_array) - b) / a
+            self.adjusted = False
+            self.temp_img_array = img_array
+            self.apply_adjustments()
+
+        try:
+            img_array = self.temp_img_array
+        except:
+            img_array = np.array(self.adjusted_image.copy())
+            
         method = self.method_var.get()
         a = self.contrast_slider.get()
         b = self.brightness_slider.get()
-        img_array = np.array(self.adjusted_image.copy())
 
         if method == "linear":
             img_array = a * img_array + b
@@ -332,14 +339,24 @@ class ImageProcessingTool:
         self.rotate_slider.grid(row=0, column=3, columnspan=6, padx=12, pady=3, sticky="we")
 
     def apply_rotate(self, value):
-        # Update the label next to the slider with the current zoom factor
         self.rotate_value_label.config(text=f"{float(value):.2f}")
-        angle = self.rotate_slider.get()
-        self.rotate_angle = angle
         
-        self.save_state()  # Save the current state before making changes
-        self.image = self.adjusted_image.copy().rotate(angle, expand=True)  # Expand to fit the entire rotated image
+        if self.adjusted is True:
+            angle = self.rotate_angle
+            self.temp_img_array = self.adjusted_image.copy().rotate(-angle, expand=True)
+            self.adjusted = False
+            self.apply_rotate()
 
+        angle = self.rotate_slider.get()
+        
+        try:
+            img = self.temp_img_array
+        except:
+            img = self.adjusted_image.copy()
+            
+        self.save_state()  # Save the current state before making changes
+        self.image = img.rotate(angle, expand=True)  # Expand to fit the entire rotated image
+        self.rotate_angle = angle
         self.update_display()
 
 # gray level slicing    
@@ -456,7 +473,7 @@ class ImageProcessingTool:
             self.image = self.bit_plane_image.copy()
 
         else:
-            self.image = self.original_image.copy()
+            self.image = self.adjusted_image.copy().copy()
         self.update_display()
 
 
