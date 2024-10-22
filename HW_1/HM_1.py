@@ -1,7 +1,6 @@
 import tkinter as tk
-from tkinter import filedialog, simpledialog, messagebox
-from tkinter import ttk
-from PIL import Image, ImageTk, ImageOps
+from tkinter import ttk, filedialog, simpledialog, messagebox
+from PIL import Image, ImageTk
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
@@ -121,7 +120,7 @@ class ImageProcessingTool:
 
     def save_state(self):
         # Save the current state of the image to history for undo functionality
-        time.sleep(0.01)
+        time.sleep(0.05)
         if self.image:
             self.history.append(self.image.copy())
             self.redo_stack.clear()  # Clear the redo stack whenever a new action is performed
@@ -157,7 +156,7 @@ class ImageProcessingTool:
         self.clean_widget()
         
     def update_display(self):
-        time.sleep(0.01)
+        time.sleep(0.05)
         print("Updating display...")
         # Update the display canvas with the current image
         self.display_image = ImageTk.PhotoImage(self.image)
@@ -175,7 +174,8 @@ class ImageProcessingTool:
     def adjust_contrast_brightness(self):
         if not self.image:
             messagebox.showerror("Error", "No image loaded.")
-            return
+            self.open_image()
+            
         self.clean_widget()
         # Row 1: Radio buttons to select method
         method_label = tk.Label(self.widge_frame, text="Select Adjustment Method:")
@@ -244,7 +244,7 @@ class ImageProcessingTool:
     def zoom_image(self):
         if not self.image:
             messagebox.showerror("Error", "No image loaded.")
-            return
+            self.open_image()
         self.clean_widget()
         # Row 1: Label to indicate zooming factor adjustment
         zoom_label = tk.Label(self.widge_frame, text="Adjust Zooming Factor:")
@@ -275,11 +275,11 @@ class ImageProcessingTool:
     def rotate_image(self):
         if not self.image:
             messagebox.showerror("Error", "No image loaded.")
-            return
+            self.open_image()
         self.clean_widget()
         
         # Row 1: Label to indicate rotating angle adjustment
-        rotate_label = tk.Label(self.widge_frame, text="Adjust Zooming Factor:")
+        rotate_label = tk.Label(self.widge_frame, text="Adjust Rotating Angle (degree):")
         rotate_label.grid(row=0, column=0, columnspan=3, padx=12, pady=3, sticky="w")
 
         # Label to display the rotating angle dynamically
@@ -307,7 +307,7 @@ class ImageProcessingTool:
         # Gray-level slicing to highlight specific gray levels in the image
         if not self.image:
             messagebox.showerror("Error", "No image loaded.")
-            return
+            self.open_image()
         
         self.clean_widget()
         # Row 1: Radio buttons to select method
@@ -378,10 +378,9 @@ class ImageProcessingTool:
     def display_histogram(self):
 
         # Display the histogram of the current image
-        if not self.original_image:
+        if not self.image:
             messagebox.showerror("Error", "No image loaded.")
-            print("Error: No image loaded.")
-            return
+            self.open_image()
         # Plot histogram using matplotlib
         plt.hist(np.array(self.image).flatten(), bins=256, range=[0, 256], color='black')
         plt.xlabel('Gray Level')
@@ -394,7 +393,7 @@ class ImageProcessingTool:
         # Bit-plane slicing to extract specific bit levels of the image
         if not self.image:
             messagebox.showerror("Error", "No image loaded.")
-            return
+            self.open_image()
         
         self.clean_widget()
         # Row 1: Radio buttons to select bit-plane
@@ -424,9 +423,9 @@ class ImageProcessingTool:
 
     def smooth_sharpen(self):
         # Apply smoothing or sharpening to the image using spatial filters
-        if not self.original_image:
+        if not self.image:
             messagebox.showerror("Error", "No image loaded.")
-            return
+            self.open_image()
         
         
         level = simpledialog.askfloat("Input", "Enter level of smoothing/sharpening")
