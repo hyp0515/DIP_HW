@@ -180,7 +180,6 @@ class ImageProcessingTool:
         self.clean_widget()
         
     def update_display(self):
-        time.sleep(0.05)
         print("Updating display...")
         # Update the display canvas with the current image
         self.display_image = ImageTk.PhotoImage(self.image)
