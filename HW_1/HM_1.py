@@ -11,7 +11,7 @@ class ImageProcessingTool:
         # Initialize the main application window
         self.root = root
         self.root.title("Image Processing Tool")
-        self.root.geometry("1000x1000")
+        self.root.geometry("1000x700")
         
         # Attributes to store image data
         self.image = None  # Original loaded image
@@ -93,7 +93,7 @@ class ImageProcessingTool:
         smooth_sharp_button.grid(row=2, column=8, columnspan=4, padx=12, pady=3, sticky="ew")
 
         # Canvas to display the image
-        self.canvas = tk.Canvas(self.root, width=600, height=600)
+        self.canvas = tk.Canvas(self.root, width=400, height=400)
         self.canvas.pack(side=tk.BOTTOM, pady=12)
 
     def clean_widget(self):
@@ -113,10 +113,11 @@ class ImageProcessingTool:
         print("Opening image...")
         # Load image using file dialog
         file_path = filedialog.askopenfilename(filetypes=[("Image Files", "*.jpg *.tif")],
-                                               initialdir='./')
+                                               initialdir='./TestImages')
         if file_path:
+            self.undo_all()
             print(f"Image loaded from: {file_path}")
-            self.original_image = Image.open(file_path).convert("L")  # Convert image to grayscale
+            self.original_image = Image.open(file_path).convert("L").resize((400, 400))  # Convert image to grayscale
             self.adjusted_image = self.original_image.copy()
             self.image = self.original_image.copy()
             self.save_state()  # Save the initial state
@@ -133,7 +134,7 @@ class ImageProcessingTool:
             return
         file_path = filedialog.asksaveasfilename(defaultextension=".png",
                                                  filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("TIFF files", "*.tif")],
-                                                 initialdir='./')
+                                                 initialdir='./TestImages')
         if file_path:
             self.image.save(file_path)
             print(f"Image saved to: {file_path}")
@@ -235,7 +236,7 @@ class ImageProcessingTool:
         contrast_label.grid(row=1, column=0, columnspan=3, padx=12, pady=3, sticky="w")
         self.contrast_value_label = tk.Label(self.widget_frame, text="1.0")  # Initialize with the default value
         self.contrast_value_label.grid(row=1, column=3, padx=12, pady=3, sticky="w")
-        self.contrast_slider = ttk.Scale(self.widget_frame, from_=0.1, to_=3.0, orient=tk.HORIZONTAL, length=700, command=self.update_contrast)
+        self.contrast_slider = ttk.Scale(self.widget_frame, from_=0.0, to_=5.0, orient=tk.HORIZONTAL, length=700, command=self.update_contrast)
         self.contrast_slider.set(self.contrast)  # Default contrast
         self.contrast_slider.grid(row=1, column=6, columnspan=6, padx=12, pady=3, sticky='we')
         
@@ -244,7 +245,7 @@ class ImageProcessingTool:
         brightness_label.grid(row=2, column=0, columnspan=3, padx=12, pady=3, sticky="w")
         self.brightness_value_label = tk.Label(self.widget_frame, text="1.0")  # Initialize with the default value
         self.brightness_value_label.grid(row=2, column=3, padx=12, pady=3, sticky="w")
-        self.brightness_slider = ttk.Scale(self.widget_frame, from_=-100, to_=100, orient=tk.HORIZONTAL, length=700, command=self.update_brightness)
+        self.brightness_slider = ttk.Scale(self.widget_frame, from_=-50, to_=50, orient=tk.HORIZONTAL, length=700, command=self.update_brightness)
         self.brightness_slider.set(self.brightness)  # Default brightness
         self.brightness_slider.grid(row=2, column=6, columnspan=6, padx=12, pady=3, sticky='we')
        
@@ -289,7 +290,7 @@ class ImageProcessingTool:
         elif method == "exp":
             img_array = np.exp(a * img_array + b)
         elif method == "log":
-            img_array = np.log(a * img_array + b)
+            img_array = np.log(np.exp(a) * img_array + b)
 
         # Clip the values to be within valid grayscale range
         img_array = np.clip(img_array, 0, 255)
