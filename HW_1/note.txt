@@ -1,0 +1,11 @@
+All packages and python are in the latest versions.
+
+To launch the image processing tool, you can simply type "python hw1.py" in the terminal.
+
+Used Package:
+- numpy
+- matplotlib
+- tkinter
+- cv2
+- PIL
+- time
